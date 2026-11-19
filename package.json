@@ -1,0 +1,14 @@
+{
+  "name": "ecommerce-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E-commerce platform: user-portal (storefront) + admin-portal (control center) + mobile apps, all on one Supabase PostgreSQL database.",
+  "scripts": {
+    "dev": "cd user-portal && bun run dev 2>&1 | tee ../dev.log",
+    "dev:admin": "cd admin-portal && bun run dev 2>&1 | tee ../admin-dev.log",
+    "dev:all": "bash .zscripts/dev.sh",
+    "lint": "cd user-portal && bun run lint && cd ../admin-portal && bun run lint",
+    "db:push": "cd user-portal && bun run db:push",
+    "db:seed": "cd user-portal && bun prisma/seed.ts"
+  }
+}

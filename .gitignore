@@ -1,0 +1,65 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# env & secrets (never commit these)
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+dev.log
+admin-dev.log
+npm-debug.log*
+
+# sandbox-only infrastructure & scratch
+.zscripts/
+tests/
+examples/
+download/
+bun.lockb
+
+# legacy local database
+*.db
+*.db-journal
+
+# uploaded media (stored in Supabase Storage in production)
+public/uploads/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# vercel
+.vercel
+
+# flutter
+mobile-flutter/.dart_tool/
+mobile-flutter/.flutter-plugins
+mobile-flutter/.flutter-plugins-dependencies
+mobile-flutter/build/
+mobile-flutter/.idea/
+mobile-flutter/*.iml
+
+# capacitor / android build artifacts
+mobile-capacitor/www/build/
+mobile-capacitor/android/.gradle/
+mobile-capacitor/android/app/build/
+mobile-capacitor/android/build/
+mobile-capacitor/android/local.properties
+mobile-capacitor/ios/App/Pods/
+mobile-capacitor/ios/App/build/
+
+# sandbox platform files (not part of the product)
+skills/
+mini-services/
+Caddyfile
