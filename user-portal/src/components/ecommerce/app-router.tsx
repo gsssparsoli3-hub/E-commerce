@@ -11,6 +11,7 @@ import { ProfileView } from "./store/profile-view";
 import { EmptyState } from "./shared/empty-state";
 import { Compass } from "lucide-react";
 import { useRoute, useRouterStore } from "@/stores/router";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 /** Client-side view switch for the storefront (hash router). */
 export function AppRouter() {
@@ -18,6 +19,17 @@ export function AppRouter() {
   const navigate = useRouterStore((s) => s.navigate);
 
   const [root, param] = segments;
+
+  const VIEW_TITLES: Record<string, string> = {
+    shop: "Shop",
+    cart: "Shopping Cart",
+    checkout: "Checkout",
+    orders: "My Orders",
+    wishlist: "My Wishlist",
+    profile: "My Account",
+  };
+  // product titles are set by ProductView (needs the fetched product name)
+  useDocumentTitle(root && root !== "product" ? VIEW_TITLES[root] : null);
 
   switch (root) {
     case undefined:

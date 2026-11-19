@@ -48,6 +48,8 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     try {
       await api("/wishlist", { method: "POST", body: JSON.stringify({ productId }) });
       toast.success(wasAdded ? "Removed from wishlist" : "Saved to wishlist");
+      // sync the full product list — the wishlist page renders `products`
+      await get().refresh();
     } catch (error) {
       get().refresh();
       toast.error(error instanceof Error ? error.message : "Could not update wishlist");

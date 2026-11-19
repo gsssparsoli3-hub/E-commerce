@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const product = await db.product.findUnique({ where: { id: productId } });
     if (!product) return notFound("Product not found");
 
-    const review = await db.review.upsert({
+    await db.review.upsert({
       where: { userId_productId: { userId: user.id, productId } },
       update: { rating, comment, title: body.title ? String(body.title).trim() : null, status: "PUBLISHED" },
       create: {
@@ -57,10 +57,22 @@ export async function POST(req: NextRequest) {
       _avg: { rating: true },
       _count: { rating: true },
     });
-    await db.product.update({
+    const productUpdate = db.product.update({
       where: { id: productId },
       data: { rating: Math.round((agg._avg.rating ?? 0) * 10) / 10, reviewCount: agg._count.rating },
     });
+
+    // Return the review WITH the user relation (the client renders review.user.name)
+    const [review] = await Promise.all([
+      db.review.findFirst({
+        where: { userId: user.id, productId },
+        select: {
+          id: true, rating: true, title: true, comment: true, createdAt: true,
+          user: { select: { id: true, name: true } },
+        },
+      }),
+      productUpdate,
+    ]);
 
     return json({ review });
   } catch (error) {

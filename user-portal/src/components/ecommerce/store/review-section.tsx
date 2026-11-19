@@ -141,15 +141,15 @@ export function ReviewSection({
         <EmptyState icon={Star} title="No reviews yet" description="Share your thoughts to help other shoppers." />
       ) : (
         <div className="max-h-96 space-y-4 overflow-y-auto pr-1">
-          {reviews.map((review) => (
+          {reviews.filter((r) => r.user).map((review) => (
             <div key={review.id} className="rounded-xl border p-4">
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {review.user.name.charAt(0).toUpperCase()}
+                    {(review.user?.name ?? "?").charAt(0).toUpperCase()}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold">{review.user.name}</p>
+                    <p className="text-sm font-semibold">{review.user?.name ?? "Customer"}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</p>
                   </div>
                 </div>

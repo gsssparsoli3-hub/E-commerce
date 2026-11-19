@@ -18,6 +18,7 @@ import { useCartStore } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
 import { useSettingsStore } from "@/stores/settings";
 import { useRouterStore } from "@/stores/router";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import type { Product, Review } from "@/types";
 
 export function ProductView({ slug }: { slug: string }) {
@@ -39,6 +40,7 @@ export function ProductView({ slug }: { slug: string }) {
   const product = !loading ? data.product : null;
   const related = !loading ? data.related : [];
   const wished = useWishlistStore((s) => s.ids.includes(product?.id ?? ""));
+  useDocumentTitle(product ? product.name : null);
 
   useEffect(() => {
     let cancelled = false;

@@ -5,6 +5,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import "../src/lib/env"; // load .env with override (stale shell DATABASE_URL must not win)
 
 const db = new PrismaClient();
 

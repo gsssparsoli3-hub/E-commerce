@@ -14,10 +14,35 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Shoperic — Online Shopping",
-  description: "Shop electronics, fashion, home essentials and more.",
-};
+/** SEO metadata is admin-controlled (Settings → SEO in the admin console). */
+export async function generateMetadata(): Promise<Metadata> {
+  let title = "Shoperic — Online Shopping";
+  let description = "Shop electronics, fashion, home essentials and more.";
+  let keywords: string | undefined;
+  let icons: Metadata["icons"] = [{ url: "/brand/favicon.svg", type: "image/svg+xml" }];
+
+  try {
+    const { db } = await import("@/lib/db");
+    const s = await db.siteSetting.findUnique({ where: { id: "singleton" } });
+    if (s) {
+      title = s.seoTitle?.trim() || `${s.siteName} — Online Shopping`;
+      description = s.seoDescription?.trim() || description;
+      keywords = s.seoKeywords?.trim() || undefined;
+      if (s.faviconUrl) icons = [{ url: s.faviconUrl }];
+    }
+  } catch {
+    // database unavailable — fall back to safe defaults
+  }
+
+  return {
+    title,
+    description,
+    keywords,
+    icons,
+    openGraph: { title, description, type: "website" },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [

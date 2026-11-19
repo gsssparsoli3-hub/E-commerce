@@ -1,3 +1,4 @@
+import '@/lib/env' // load local .env (overrides stale shell values) — must run before PrismaClient
 import { PrismaClient } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as {
