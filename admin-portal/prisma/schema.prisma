@@ -79,6 +79,11 @@ model Product {
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images      String   @default("[]") // JSON array of URLs
   tags        String   @default("[]") // JSON array of strings
+  // Rich catalog fields (Amazon/Flipkart-style PDP)
+  brand       String?  // e.g. "Shoperic" / "SonicWave"
+  warranty    String?  // e.g. "1 year manufacturer warranty"
+  highlights  String   @default("[]") // JSON array of bullet-point key features
+  specifications String @default("{}") // JSON object of key-value pairs (Brand, Model, Color, Weight…)
   status      String   @default("ACTIVE") // ACTIVE | DRAFT | ARCHIVED
   featured    Boolean  @default(false)
   rating      Float    @default(0)

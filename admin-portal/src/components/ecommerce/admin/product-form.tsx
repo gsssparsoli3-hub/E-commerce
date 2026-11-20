@@ -35,8 +35,16 @@ export function ProductForm({
     categoryId: product?.category.id ?? categories[0]?.id ?? "",
     images: product?.images ?? [] as string[],
     tags: (product?.tags ?? []).join(", "),
+    brand: product?.brand ?? "",
+    warranty: product?.warranty ?? "",
+    highlights: (product?.highlights ?? []).join("\n"),
     featured: product?.featured ?? false,
     status: product?.status ?? "ACTIVE",
+  });
+  // Specs: array of {key, value} pairs for easy editing
+  const [specs, setSpecs] = useState<{ key: string; value: string }[]>(() => {
+    const obj = product?.specifications ?? {};
+    return Object.entries(obj).map(([key, value]) => ({ key, value: String(value) }));
   });
 
   async function submit(e: React.FormEvent) {
@@ -47,6 +55,8 @@ export function ProductForm({
     }
     setBusy(true);
     try {
+      const specsObj: Record<string, string> = {};
+      specs.forEach((s) => { if (s.key.trim()) specsObj[s.key.trim()] = s.value.trim(); });
       const payload = {
         name: form.name,
         description: form.description,
@@ -57,6 +67,10 @@ export function ProductForm({
         categoryId: form.categoryId,
         images: form.images,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        brand: form.brand || undefined,
+        warranty: form.warranty || undefined,
+        highlights: form.highlights.split("\n").map((h) => h.trim()).filter(Boolean),
+        specifications: specsObj,
         featured: form.featured,
         status: form.status,
       };
@@ -131,9 +145,38 @@ export function ProductForm({
         <ImageUploader images={form.images} onChange={(images) => setForm({ ...form, images })} max={6} />
       </div>
 
+      <div className="space-y-1.5">
+        <Label htmlFor="p-brand">Brand</Label>
+        <Input id="p-brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="e.g. SonicWave" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="p-warranty">Warranty</Label>
+        <Input id="p-warranty" value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} placeholder="e.g. 1 year manufacturer warranty" />
+      </div>
+
       <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor="p-tags">Tags (comma separated)</Label>
         <Input id="p-tags" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="audio, wireless, bestseller" />
+      </div>
+
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor="p-highlights">Key highlights (one per line)</Label>
+        <Textarea id="p-highlights" rows={4} value={form.highlights} onChange={(e) => setForm({ ...form, highlights: e.target.value })} placeholder={"40-hour battery life\nActive noise cancellation\nBluetooth 5.3"} />
+        <p className="text-xs text-muted-foreground">Shown as bullet points on the product page</p>
+      </div>
+
+      <div className="space-y-2 sm:col-span-2">
+        <Label>Specifications</Label>
+        <div className="space-y-2 rounded-lg border p-3">
+          {specs.map((s, i) => (
+            <div key={i} className="flex gap-2">
+              <Input className="flex-1" placeholder="Key (e.g. Color)" value={s.key} onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, key: e.target.value } : x))} />
+              <Input className="flex-1" placeholder="Value (e.g. Black)" value={s.value} onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, value: e.target.value } : x))} />
+              <Button type="button" variant="outline" size="icon" onClick={() => setSpecs(specs.filter((_, j) => j !== i))} aria-label="Remove spec">&times;</Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={() => setSpecs([...specs, { key: "", value: "" }])}>+ Add spec</Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between rounded-lg border p-3 sm:col-span-2">

@@ -33,6 +33,10 @@ export type Product = {
   stock: number;
   images: string[];
   tags: string[];
+  brand: string | null;
+  warranty: string | null;
+  highlights: string[];
+  specifications: Record<string, string>;
   status: string;
   featured: boolean;
   rating: number;
@@ -48,6 +52,7 @@ export type Review = {
   title: string | null;
   comment: string;
   createdAt: string;
+  verifiedPurchase?: boolean;
   user: { id: string; name: string };
 };
 

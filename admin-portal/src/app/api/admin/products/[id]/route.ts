@@ -40,6 +40,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
       data.images = JSON.stringify(images);
     }
     if (body.tags !== undefined) data.tags = JSON.stringify(Array.isArray(body.tags) ? body.tags : []);
+    if (body.brand !== undefined) data.brand = body.brand ? String(body.brand).trim() : null;
+    if (body.warranty !== undefined) data.warranty = body.warranty ? String(body.warranty).trim() : null;
+    if (body.highlights !== undefined) data.highlights = JSON.stringify(Array.isArray(body.highlights) ? body.highlights.filter((h: unknown) => typeof h === "string" && String(h).trim()) : []);
+    if (body.specifications !== undefined) data.specifications = JSON.stringify(body.specifications && typeof body.specifications === "object" ? body.specifications : {});
     if (body.featured !== undefined) data.featured = body.featured === true;
     if (body.status !== undefined && ["ACTIVE", "DRAFT", "ARCHIVED"].includes(body.status)) data.status = body.status;
 

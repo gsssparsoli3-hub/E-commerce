@@ -2,13 +2,15 @@ import type { Prisma } from "@prisma/client";
 
 // Central serializers keep API responses consistent and files small.
 
-export function serializeProduct<T extends { category: { id: string; name: string; slug: string }; images: string; tags: string }>(
+export function serializeProduct<T extends { category: { id: string; name: string; slug: string }; images: string; tags: string; highlights: string; specifications: string }>(
   product: T & { createdAt: Date }
 ) {
   return {
     ...product,
     images: safeParse(product.images, [] as string[]),
     tags: safeParse(product.tags, [] as string[]),
+    highlights: safeParse(product.highlights, [] as string[]),
+    specifications: safeParse(product.specifications, {} as Record<string, string>),
     createdAt: product.createdAt.toISOString(),
     category: {
       id: product.category.id,
