@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { json, serverError } from "@/lib/api-helpers";
+import { cachedJson, serverError } from "@/lib/api-helpers";
 import { serializeSettings } from "@/lib/serializers";
 
 export async function GET() {
@@ -8,7 +8,7 @@ export async function GET() {
     if (!setting) {
       setting = await db.siteSetting.create({ data: { id: "singleton" } });
     }
-    return json({ settings: serializeSettings(setting) });
+    return cachedJson({ settings: serializeSettings(setting) }, { sMaxage: 600, swr: 1800 });
   } catch (error) {
     return serverError(error);
   }

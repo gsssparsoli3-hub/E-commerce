@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import {
-  CheckCircle2, ChevronRight, ExternalLink, Package, PackageCheck,
+  CheckCircle2, ChevronRight, Download, ExternalLink, Package, PackageCheck,
   Search, Ship, Truck, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,6 +48,8 @@ export function AdminOrdersView() {
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [shipForm, setShipForm] = useState(false);
   const [tracking, setTracking] = useState({ courierName: "", trackingNumber: "", trackingUrl: "" });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   function load() {
     const params = new URLSearchParams({ page: String(page), limit: "15" });
@@ -57,6 +60,62 @@ export function AdminOrdersView() {
   }
 
   useEffect(() => { load(); }, [page, search, status, paymentStatus]);
+
+  const allOnPageSelected = data ? data.orders.length > 0 && data.orders.every((o) => selectedIds.has(o.id)) : false;
+
+  function toggleRow(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll() {
+    if (!data) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allOnPageSelected) data.orders.forEach((o) => next.delete(o.id));
+      else data.orders.forEach((o) => next.add(o.id));
+      return next;
+    });
+  }
+
+  async function bulkUpdate(newStatus: string) {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    let ok = 0;
+    for (const id of selectedIds) {
+      try {
+        await api(`/admin/orders/${id}`, { method: "PATCH", body: JSON.stringify({ status: newStatus }) });
+        ok++;
+      } catch { /* skip failed */ }
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+    toast.success(`${ok} order(s) marked ${newStatus}`);
+    load();
+  }
+
+  function exportCSV() {
+    if (!data) return;
+    const rows = data.orders.filter((o) => selectedIds.has(o.id));
+    const list = rows.length > 0 ? rows : data.orders;
+    const header = ["Order", "Customer", "Email", "Date", "Payment Method", "Payment Status", "Order Status", "Total", "Courier", "Tracking"];
+    const lines = list.map((o) => [
+      o.orderNumber, o.customer, o.customerEmail, formatDateTime(o.createdAt),
+      o.paymentMethod, o.paymentStatus, o.status, (o.total / 100).toFixed(2),
+      o.courierName ?? "", o.trackingNumber ?? "",
+    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const csv = [header.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${list.length} order(s) to CSV`);
+  }
 
   async function refreshSelected() {
     if (!selected) return;
@@ -128,7 +187,32 @@ export function AdminOrdersView() {
             {PAYMENT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Button variant="outline" size="sm" className="ml-auto gap-1.5" onClick={exportCSV}>
+          <Download className="h-4 w-4" /> Export CSV
+        </Button>
       </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-primary/5 p-3">
+          <span className="text-sm font-semibold">{selectedIds.size} selected</span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5" disabled={bulkBusy} onClick={() => bulkUpdate("CONFIRMED")}>
+              <CheckCircle2 className="h-3.5 w-3.5" /> Confirm
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5" disabled={bulkBusy} onClick={() => bulkUpdate("SHIPPED")}>
+              <Truck className="h-3.5 w-3.5" /> Ship
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5" disabled={bulkBusy} onClick={() => bulkUpdate("DELIVERED")}>
+              <PackageCheck className="h-3.5 w-3.5" /> Deliver
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={exportCSV}>
+              <Download className="h-3.5 w-3.5" /> Export selected
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-0">
@@ -141,6 +225,7 @@ export function AdminOrdersView() {
               <table className="w-full min-w-150 text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="w-10 p-3"><Checkbox checked={allOnPageSelected} onCheckedChange={toggleAll} aria-label="Select all" /></th>
                     <th className="p-3 font-medium">Order</th>
                     <th className="p-3 font-medium">Customer</th>
                     <th className="p-3 font-medium">Date</th>
@@ -154,7 +239,7 @@ export function AdminOrdersView() {
                   {data.orders.map((o) => (
                     <tr
                       key={o.id}
-                      className="cursor-pointer border-b last:border-0 hover:bg-muted/40"
+                      className={`cursor-pointer border-b last:border-0 hover:bg-muted/40 ${selectedIds.has(o.id) ? "bg-primary/5" : ""}`}
                       onClick={() => {
                         setSelected(o);
                         setTracking({
@@ -165,6 +250,9 @@ export function AdminOrdersView() {
                         setShipForm(false);
                       }}
                     >
+                      <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox checked={selectedIds.has(o.id)} onCheckedChange={() => toggleRow(o.id)} aria-label={`Select ${o.orderNumber}`} />
+                      </td>
                       <td className="p-3 font-semibold">{o.orderNumber}</td>
                       <td className="p-3">
                         <p>{o.customer}</p>
@@ -188,7 +276,7 @@ export function AdminOrdersView() {
                     </tr>
                   ))}
                   {data.orders.length === 0 && (
-                    <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No orders found.</td></tr>
+                    <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No orders found.</td></tr>
                   )}
                 </tbody>
               </table>

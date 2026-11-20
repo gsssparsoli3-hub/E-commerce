@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   BarChart3, Image, LayoutDashboard, LogOut, Menu, Package, Settings,
-  ShoppingCart, Store, Tag, Users,
+  ShoppingCart, Star, Store, Tag, Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -15,6 +15,7 @@ import { AdminUsersView } from "./users-view";
 import { AdminCouponsView } from "./coupons-view";
 import { AdminBannersView } from "./banners-view";
 import { AdminSettingsView } from "./settings-view";
+import { AdminReviewsView } from "./reviews-view";
 import { useAuthStore } from "@/stores/auth";
 import { useSettingsStore } from "@/stores/settings";
 import { useRouterStore } from "@/stores/router";
@@ -27,6 +28,7 @@ const NAV = [
   { label: "Categories", to: "/admin/categories", icon: Tag },
   { label: "Banners", to: "/admin/banners", icon: Image },
   { label: "Coupons", to: "/admin/coupons", icon: BarChart3 },
+  { label: "Reviews", to: "/admin/reviews", icon: Star },
   { label: "Customers", to: "/admin/users", icon: Users },
   { label: "Settings", to: "/admin/settings", icon: Settings },
 ];
@@ -148,6 +150,8 @@ function AdminRouter() {
       return <AdminBannersView />;
     case "coupons":
       return <AdminCouponsView />;
+    case "reviews":
+      return <AdminReviewsView />;
     case "users":
       return <AdminUsersView />;
     case "settings":

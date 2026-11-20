@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Headphones, PackageCheck, ShieldCheck, Truck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Price } from "../shared/price";
 import { api } from "@/lib/client-api";
 import { SectionHeader } from "../shared/section-header";
 import { ProductCard } from "../shared/product-card";
 import { HeroCarousel } from "./hero-carousel";
 import { useRouterStore } from "@/stores/router";
+import { useRecentlyViewedStore, type RecentProduct } from "@/stores/recently-viewed";
 import type { Banner, Category, Product } from "@/types";
 
 const TRUST_ITEMS = [
@@ -24,8 +27,11 @@ export function HomeView() {
   const [featured, setFeatured] = useState<Product[]>([]);
   const [bestsellers, setBestsellers] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const recent = useRecentlyViewedStore((s) => s.items);
+  const hydrateRecent = useRecentlyViewedStore((s) => s.hydrate);
 
   useEffect(() => {
+    hydrateRecent();
     Promise.all([
       api<{ banners: Banner[] }>("/banners?position=HERO"),
       api<{ categories: Category[] }>("/categories"),
@@ -40,7 +46,7 @@ export function HomeView() {
       })
       .catch(() => null)
       .finally(() => setLoading(false));
-  }, []);
+  }, [hydrateRecent]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-12 px-3 py-5 sm:px-6 sm:py-8">
@@ -87,12 +93,13 @@ export function HomeView() {
                     onClick={() => navigate(`/shop?category=${c.slug}`)}
                     className="group overflow-hidden rounded-xl border bg-card text-left transition-all hover:shadow-md hover:-translate-y-0.5"
                   >
-                    <div className="aspect-[4/3] overflow-hidden bg-muted">
-                      <img
+                    <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                      <Image
                         src={c.image ?? "/brand/logo.png"}
                         alt={c.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
                     <div className="p-2.5">
@@ -125,6 +132,38 @@ export function HomeView() {
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 sm:gap-4">
                 {bestsellers.slice(0, 8).map((p) => <ProductCard key={p.id} product={p} />)}
+              </div>
+            </section>
+          )}
+
+          {/* Recently viewed (localStorage — no API, instant) */}
+          {recent.length > 0 && (
+            <section aria-labelledby="recent-heading">
+              <div id="recent-heading">
+                <SectionHeader title="Recently Viewed" subtitle="Pick up where you left off" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 sm:gap-4">
+                {recent.slice(0, 4).map((p: RecentProduct) => (
+                  <button
+                    key={p.id}
+                    onClick={() => navigate(`/product/${p.slug}`)}
+                    className="group overflow-hidden rounded-xl border bg-card text-left transition-all hover:shadow-md hover:-translate-y-0.5"
+                  >
+                    <div className="relative aspect-square overflow-hidden bg-muted">
+                      <Image
+                        src={p.image || "/brand/logo.png"}
+                        alt={p.name}
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-3">
+                      <p className="line-clamp-2 text-sm font-medium group-hover:text-primary">{p.name}</p>
+                      <Price price={p.price} mrp={p.mrp} size="sm" />
+                    </div>
+                  </button>
+                ))}
               </div>
             </section>
           )}

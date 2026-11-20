@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { json, notFound, serverError } from "@/lib/api-helpers";
+import { cachedJson, notFound, serverError } from "@/lib/api-helpers";
 import { serializeProduct, productInclude } from "@/lib/serializers";
 
-// GET /api/products/[slug] — single product + related products
+// GET /api/products/[slug] — single product + related + reviews (cached, one round-trip)
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -16,17 +16,30 @@ export async function GET(
     });
     if (!product || product.status !== "ACTIVE") return notFound("Product not found");
 
-    const related = await db.product.findMany({
-      where: { categoryId: product.categoryId, status: "ACTIVE", id: { not: product.id } },
-      take: 4,
-      orderBy: { soldCount: "desc" },
-      include: productInclude,
-    });
+    // Fetch related + reviews in parallel (independent of each other)
+    const [related, reviews] = await Promise.all([
+      db.product.findMany({
+        where: { categoryId: product.categoryId, status: "ACTIVE", id: { not: product.id } },
+        take: 4,
+        orderBy: { soldCount: "desc" },
+        include: productInclude,
+      }),
+      db.review.findMany({
+        where: { productId: product.id, status: "PUBLISHED" },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true, rating: true, title: true, comment: true, createdAt: true,
+          user: { select: { id: true, name: true } },
+        },
+        take: 50,
+      }),
+    ]);
 
-    return json({
+    return cachedJson({
       product: serializeProduct(product),
       related: related.map(serializeProduct),
-    });
+      reviews,
+    }, { sMaxage: 120, swr: 600 });
   } catch (error) {
     return serverError(error);
   }

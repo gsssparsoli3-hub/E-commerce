@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { json, serverError } from "@/lib/api-helpers";
+import { json, serverError, cachedJson } from "@/lib/api-helpers";
 import { serializeProduct, productInclude } from "@/lib/serializers";
 
-// GET /api/products — public catalog with filters, search, sort, pagination
+// GET /api/products — public catalog with filters, search, sort, pagination (cached)
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
@@ -50,10 +50,11 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    return json({
+    // Cache for 60s at the CDN edge, serve stale up to 5min while revalidating
+    return cachedJson({
       products: products.map(serializeProduct),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-    });
+    }, { sMaxage: 60, swr: 300 });
   } catch (error) {
     return serverError(error);
   }

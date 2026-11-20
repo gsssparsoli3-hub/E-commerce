@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      { protocol: "https", hostname: "z-cdn.chatglm.cn" },
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "supabase.co" },
+    ],
+  },
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath ?? "",
   },

@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     const orders = await db.order.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
+      take: 50, // bound — most recent 50 orders; older ones via search/track
       include: { items: true, events: { orderBy: { createdAt: "asc" } } },
     });
     return json({ orders: orders.map(serializeOrder) });
@@ -45,9 +46,9 @@ export async function POST(req: NextRequest) {
     type RawItem = { productId: string; quantity: number };
     const rawItems: RawItem[] = Array.isArray(body.items) && body.items.length > 0
       ? body.items
-      : (await db.cartItem.findMany({ where: { userId: user.id } })).map((c) => ({
-          productId: c.productId,
-          quantity: c.quantity,
+      : (await db.cartItem.findMany({
+          where: { userId: user.id },
+          select: { productId: true, quantity: true }, // slim — only what we need
         }));
 
     if (rawItems.length === 0) return badRequest("Your cart is empty");
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
       : null;
     if (!address) return badRequest("Please select a delivery address");
 
-    // ---- Validate products & compute totals from DB ----
+    // ---- Validate products & compute totals from DB (single batched query, no N+1) ----
     const settings = await db.siteSetting.findUnique({ where: { id: "singleton" } });
     if (!settings) return badRequest("Store is not configured yet");
 
@@ -69,12 +70,18 @@ export async function POST(req: NextRequest) {
       return badRequest("Cash on Delivery is currently disabled.");
     }
 
+    // Batch-fetch ALL products in one query instead of looping findUnique per item
+    const products = await db.product.findMany({
+      where: { id: { in: rawItems.map((r) => String(r.productId)) } },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
     const lineItems: {
       productId: string; name: string; image: string; price: number; quantity: number;
     }[] = [];
 
     for (const raw of rawItems) {
-      const product = await db.product.findUnique({ where: { id: String(raw.productId) } });
+      const product = productMap.get(String(raw.productId));
       if (!product || product.status !== "ACTIVE") {
         return badRequest("One of the products is no longer available");
       }

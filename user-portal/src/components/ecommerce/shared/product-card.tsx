@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Heart, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,11 +31,12 @@ export function ProductCard({ product }: { product: Product }) {
         aria-label={`View ${product.name}`}
       >
         <div className="relative aspect-square overflow-hidden bg-muted">
-          <img
+          <Image
             src={product.images[0] ?? "/brand/logo.png"}
             alt={product.name}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute left-2 top-2 flex flex-col gap-1">
             {discount > 0 && (

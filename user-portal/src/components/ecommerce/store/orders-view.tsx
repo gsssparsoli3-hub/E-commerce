@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, ExternalLink, Package, Truck, XCircle } from "lucide-react";
+import { ChevronDown, Download, ExternalLink, Package, RotateCcw, Truck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,7 @@ import { EmptyState } from "../shared/empty-state";
 import { StatusBadge } from "../shared/status-badge";
 import { api } from "@/lib/client-api";
 import { useAuthStore } from "@/stores/auth";
+import { useCartStore } from "@/stores/cart";
 import { useUiStore } from "@/stores/ui";
 import { useRouterStore } from "@/stores/router";
 import { formatINR, formatDateTime } from "@/lib/format";
@@ -20,6 +21,7 @@ export function OrdersView() {
   const navigate = useRouterStore((s) => s.navigate);
   const user = useAuthStore((s) => s.user);
   const openAuth = useUiStore((s) => s.openAuth);
+  const add = useCartStore((s) => s.add);
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -40,6 +42,28 @@ export function OrdersView() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not cancel order");
     }
+  }
+
+  // Reorder — add every item from a past order back into the cart
+  async function reorder(order: Order) {
+    let okCount = 0;
+    for (const item of order.items) {
+      const ok = await add(item.productId, item.quantity);
+      if (ok) okCount++;
+    }
+    if (okCount === order.items.length) {
+      toast.success("Added all items to cart", { description: `${okCount} items from ${order.orderNumber}` });
+      navigate("/cart");
+    } else if (okCount > 0) {
+      toast.info(`${okCount} of ${order.items.length} items added`, { description: "Some items may be out of stock" });
+      navigate("/cart");
+    } else {
+      toast.error("Could not add items — they may be out of stock");
+    }
+  }
+
+  function downloadInvoice(order: Order) {
+    window.open(`/api/orders/${order.orderNumber}/invoice`, "_blank");
   }
 
   if (!user) {
@@ -161,16 +185,25 @@ export function OrdersView() {
                       </div>
                     </div>
 
-                    {(order.status === "PLACED" || order.status === "CONFIRMED") && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => cancelOrder(order)}
-                      >
-                        <XCircle className="h-4 w-4" /> Cancel order
+                    {/* Action buttons */}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => reorder(order)}>
+                        <RotateCcw className="h-4 w-4" /> Reorder
                       </Button>
-                    )}
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadInvoice(order)}>
+                        <Download className="h-4 w-4" /> Invoice
+                      </Button>
+                      {(order.status === "PLACED" || order.status === "CONFIRMED") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => cancelOrder(order)}
+                        >
+                          <XCircle className="h-4 w-4" /> Cancel
+                        </Button>
+                      )}
+                    </div>
 
                     {/* Tracking link for shipped / out-for-delivery orders */}
                     {(order.status === "SHIPPED" || order.status === "DELIVERED") && order.trackingNumber && (

@@ -4,6 +4,7 @@ import { json, forbidden, serverError } from "@/lib/api-helpers";
 import { requireAdmin } from "@/lib/auth";
 
 // GET /api/admin/stats — dashboard metrics (revenue, sales chart, statuses, recent orders)
+// Bounded queries only — no full-table scans. Revenue + counts use aggregates/groupBy.
 export async function GET(req: NextRequest) {
   try {
     const admin = await requireAdmin(req);
@@ -13,9 +14,21 @@ export async function GET(req: NextRequest) {
     const since14 = new Date(now.getTime() - 13 * 86400000);
     since14.setHours(0, 0, 0, 0);
 
-    const [paidAgg, allOrders, customers, productCount, lowStock, recent, topItems] = await Promise.all([
-      db.order.aggregate({ where: { paymentStatus: "PAID" }, _sum: { total: true } }),
-      db.order.findMany({ select: { status: true, createdAt: true, total: true } }),
+    const [
+      revenueAgg,
+      orderCount,
+      pendingCount,
+      customers,
+      productCount,
+      lowStock,
+      recent,
+      topItems,
+      statusGroups,
+      last14Orders,
+    ] = await Promise.all([
+      db.order.aggregate({ where: { paymentStatus: "PAID" }, _sum: { total: true }, _count: true }),
+      db.order.count(),
+      db.order.count({ where: { status: "PLACED" } }),
       db.user.count({ where: { role: "CUSTOMER" } }),
       db.product.count(),
       db.product.findMany({
@@ -27,7 +40,7 @@ export async function GET(req: NextRequest) {
       db.order.findMany({
         orderBy: { createdAt: "desc" },
         take: 8,
-        include: { items: true, user: { select: { name: true } } },
+        include: { items: { select: { id: true } }, user: { select: { name: true } } },
       }),
       db.orderItem.groupBy({
         by: ["name"],
@@ -35,14 +48,23 @@ export async function GET(req: NextRequest) {
         orderBy: { _sum: { quantity: "desc" } },
         take: 5,
       }),
+      db.order.groupBy({
+        by: ["status"],
+        _count: true,
+      }),
+      // Only fetch the last 14 days of orders for the sales series (bounded)
+      db.order.findMany({
+        where: { createdAt: { gte: since14 } },
+        select: { status: true, createdAt: true, total: true },
+      }),
     ]);
 
-    // 14-day sales series
+    // 14-day sales series (built from the bounded last14Orders set)
     const series: { date: string; total: number; orders: number }[] = [];
     for (let i = 0; i < 14; i++) {
       const day = new Date(since14.getTime() + i * 86400000);
       const next = new Date(day.getTime() + 86400000);
-      const dayOrders = allOrders.filter(
+      const dayOrders = last14Orders.filter(
         (o) => o.createdAt >= day && o.createdAt < next && o.status !== "CANCELLED"
       );
       series.push({
@@ -52,21 +74,16 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const statusCounts = allOrders.reduce<Record<string, number>>((acc, o) => {
-      acc[o.status] = (acc[o.status] ?? 0) + 1;
-      return acc;
-    }, {});
-
     return json({
       stats: {
-        revenue: paidAgg._sum.total ?? 0,
-        orderCount: allOrders.length,
+        revenue: revenueAgg._sum.total ?? 0,
+        orderCount,
         customerCount: customers,
         productCount,
-        pendingOrders: statusCounts["PLACED"] ?? 0,
+        pendingOrders: pendingCount,
         lowStockCount: lowStock.length,
         salesSeries: series,
-        statusBreakdown: Object.entries(statusCounts).map(([status, count]) => ({ status, count })),
+        statusBreakdown: statusGroups.map((g) => ({ status: g.status, count: g._count })),
         topProducts: topItems.map((t) => ({ name: t.name, sold: t._sum.quantity ?? 0, revenue: 0 })),
         lowStock,
       },

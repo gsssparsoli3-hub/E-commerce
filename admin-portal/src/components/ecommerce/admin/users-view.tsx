@@ -8,23 +8,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "../shared/status-badge";
+import { Pagination } from "../shared/pagination";
 import { api } from "@/lib/client-api";
 import { formatDate, formatINR } from "@/lib/format";
 import type { AdminUser } from "@/types";
 
+type ListResponse = { users: AdminUser[]; pagination: { page: number; pages: number; total: number } };
+
 export function AdminUsersView() {
-  const [users, setUsers] = useState<AdminUser[] | null>(null);
+  const [data, setData] = useState<ListResponse | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   function load() {
-    api<{ users: AdminUser[] }>("/admin/users").then((r) => setUsers(r.users)).catch(() => null);
+    const params = new URLSearchParams({ page: String(page), limit: "20" });
+    if (search) params.set("search", search);
+    api<ListResponse>(`/admin/users?${params}`).then(setData).catch(() => null);
   }
 
-  useEffect(() => { load(); }, []);
+  // Debounced server-side search
+  useEffect(() => {
+    const t = setTimeout(() => { setPage(1); load(); }, search ? 350 : 0);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const filtered = users?.filter(
-    (u) => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => { load(); }, [page]);
 
   async function toggleBlock(user: AdminUser) {
     try {
@@ -39,23 +47,25 @@ export function AdminUsersView() {
     }
   }
 
+  const users = data?.users ?? [];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-bold">Customers</h1>
-        {users && <span className="text-sm text-muted-foreground">({users.length} registered)</span>}
+        {data && <span className="text-sm text-muted-foreground">({data.pagination.total} registered)</span>}
       </div>
 
       <div className="relative max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customers…" className="pl-9" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email or phone…" className="pl-9" />
       </div>
 
       <Card>
         <CardContent className="p-0">
-          {!filtered ? (
+          {!data ? (
             <div className="space-y-2 p-4">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
+              {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -72,7 +82,7 @@ export function AdminUsersView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((u) => (
+                  {users.map((u) => (
                     <tr key={u.id} className="border-b last:border-0 hover:bg-muted/40">
                       <td className="p-3">
                         <div className="flex items-center gap-3">
@@ -106,7 +116,7 @@ export function AdminUsersView() {
                       </td>
                     </tr>
                   ))}
-                  {filtered.length === 0 && (
+                  {users.length === 0 && (
                     <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No customers found.</td></tr>
                   )}
                 </tbody>
@@ -115,6 +125,8 @@ export function AdminUsersView() {
           )}
         </CardContent>
       </Card>
+
+      {data && <Pagination page={data.pagination.page} pages={data.pagination.pages} onChange={setPage} />}
 
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <ShieldCheck className="h-3.5 w-3.5" />

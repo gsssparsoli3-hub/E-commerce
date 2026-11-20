@@ -6,6 +6,14 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      { protocol: "https", hostname: "z-cdn.chatglm.cn" },
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "supabase.co" },
+    ],
+  },
   async rewrites() {
     // In local/sandbox development the admin portal (../admin-portal) runs on
     // port 3001; proxying /admin/* through this app makes both portals

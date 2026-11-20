@@ -42,6 +42,20 @@ export async function POST(req: NextRequest) {
     const product = await db.product.findUnique({ where: { id: productId } });
     if (!product) return notFound("Product not found");
 
+    // Verified-purchase check: the reviewer must have a DELIVERED order
+    // containing this product. Prevents spam reviews on products never bought.
+    const hasPurchased = await db.orderItem.findFirst({
+      where: {
+        productId,
+        order: { userId: user.id, status: { in: ["DELIVERED", "SHIPPED", "CONFIRMED"] } },
+      },
+      select: { id: true },
+      take: 1,
+    });
+    if (!hasPurchased) {
+      return badRequest("You can only review products you have purchased and received");
+    }
+
     await db.review.upsert({
       where: { userId_productId: { userId: user.id, productId } },
       update: { rating, comment, title: body.title ? String(body.title).trim() : null, status: "PUBLISHED" },

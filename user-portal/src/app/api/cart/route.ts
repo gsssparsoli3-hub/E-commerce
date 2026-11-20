@@ -6,13 +6,11 @@ import { serializeProduct, productInclude } from "@/lib/serializers";
 
 async function getCart(userId: string) {
   const items = await db.cartItem.findMany({
-    where: { userId },
+    where: { userId, product: { status: "ACTIVE" } }, // filter in DB, not JS
     orderBy: { createdAt: "desc" },
     include: { product: { include: productInclude } },
   });
-  return items
-    .filter((i) => i.product.status === "ACTIVE")
-    .map((i) => ({ id: i.id, quantity: i.quantity, product: serializeProduct(i.product) }));
+  return items.map((i) => ({ id: i.id, quantity: i.quantity, product: serializeProduct(i.product) }));
 }
 
 export async function GET(req: NextRequest) {

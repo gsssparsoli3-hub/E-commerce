@@ -10,14 +10,12 @@ export async function GET(req: NextRequest) {
     if (!user) return json({ items: [] });
 
     const items = await db.wishlistItem.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, product: { status: "ACTIVE" } }, // filter in DB, not JS
       orderBy: { createdAt: "desc" },
       include: { product: { include: productInclude } },
     });
     return json({
-      items: items
-        .filter((i) => i.product.status === "ACTIVE")
-        .map((i) => ({ id: i.id, product: serializeProduct(i.product) })),
+      items: items.map((i) => ({ id: i.id, product: serializeProduct(i.product) })),
     });
   } catch (error) {
     return serverError(error);

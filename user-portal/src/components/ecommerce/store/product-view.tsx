@@ -18,6 +18,7 @@ import { useCartStore } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
 import { useSettingsStore } from "@/stores/settings";
 import { useRouterStore } from "@/stores/router";
+import { useRecentlyViewedStore } from "@/stores/recently-viewed";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import type { Product, Review } from "@/types";
 
@@ -27,6 +28,7 @@ export function ProductView({ slug }: { slug: string }) {
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const wishlistEnabled = useSettingsStore((s) => s.settings?.wishlistEnabled ?? true);
   const reviewsEnabled = useSettingsStore((s) => s.settings?.reviewsEnabled ?? true);
+  const addRecent = useRecentlyViewedStore((s) => s.add);
 
   // Data for the current slug is kept together so `loading` can be derived
   // (no setState needed in the effect body).
@@ -42,24 +44,34 @@ export function ProductView({ slug }: { slug: string }) {
   const wished = useWishlistStore((s) => s.ids.includes(product?.id ?? ""));
   useDocumentTitle(product ? product.name : null);
 
+  // Single round-trip: product + related + reviews come together from /products/[slug]
   useEffect(() => {
     let cancelled = false;
-    api<{ product: Product; related: Product[] }>(`/products/${slug}`)
-      .then(async (res) => {
+    api<{ product: Product; related: Product[]; reviews?: Review[] }>(`/products/${slug}`)
+      .then((res) => {
         if (cancelled) return;
         setData({ forSlug: slug, product: res.product, related: res.related });
+        setReviews(res.reviews ?? []);
         setQuantity(1);
         setActiveImage(0);
-        if (reviewsEnabled) {
-          const r = await api<{ reviews: Review[] }>(`/reviews?productId=${res.product.id}`).catch(() => ({ reviews: [] as Review[] }));
-          if (!cancelled) setReviews(r.reviews);
+        // Record in recently-viewed (localStorage, no API)
+        if (res.product) {
+          const imgs = res.product.images ?? [];
+          addRecent({
+            id: res.product.id,
+            name: res.product.name,
+            slug: res.product.slug,
+            price: res.product.price,
+            mrp: res.product.mrp,
+            image: imgs[0] ?? "",
+          });
         }
       })
       .catch(() => {
         if (!cancelled) setData({ forSlug: slug, product: null, related: [] });
       });
     return () => { cancelled = true; };
-  }, [slug, reviewsEnabled]);
+  }, [slug]);
 
   // Product JSON-LD for SEO
   useEffect(() => {

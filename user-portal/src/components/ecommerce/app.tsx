@@ -28,11 +28,15 @@ export function EcommerceApp() {
   const refreshWishlist = useWishlistStore((s) => s.refresh);
 
   useEffect(() => {
-    fetchSettings();
-    fetchMe().then(() => {
-      refreshCart();
-      refreshWishlist();
-    });
+    // Fire settings + me in parallel (independent) — then cart + wishlist (depend on auth)
+    let cancelled = false;
+    Promise.all([fetchSettings(), fetchMe()])
+      .then(() => {
+        if (cancelled) return;
+        return Promise.all([refreshCart(), refreshWishlist()]);
+      })
+      .catch(() => null);
+    return () => { cancelled = true; };
   }, []);
 
   const ready = settingsReady && authReady;

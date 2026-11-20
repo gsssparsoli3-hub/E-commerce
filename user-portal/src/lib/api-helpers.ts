@@ -4,6 +4,18 @@ export function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status });
 }
 
+/** Cached JSON helper for public GET endpoints. Adds Cache-Control + SWR headers. */
+export function cachedJson(data: unknown, opts: { sMaxage?: number; swr?: number } = {}) {
+  const sMaxage = opts.sMaxage ?? 60;
+  const swr = opts.swr ?? 300;
+  return NextResponse.json(data, {
+    status: 200,
+    headers: {
+      "Cache-Control": `public, s-maxage=${sMaxage}, stale-while-revalidate=${swr}`,
+    },
+  });
+}
+
 export function badRequest(message = "Invalid request") {
   return NextResponse.json({ error: message }, { status: 400 });
 }
