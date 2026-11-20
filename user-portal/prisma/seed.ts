@@ -1,7 +1,8 @@
 /**
  * Seed script — run with: bun prisma/seed.ts
  * Creates admin + demo users, categories, real products (with live image URLs),
- * banners, coupons, reviews, historical orders, and site settings.
+ * banners, coupons, reviews, and site settings.
+ * Note: no demo orders/payments are seeded — the admin panel starts clean.
  */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -47,12 +48,9 @@ async function main() {
   const priya = await db.user.create({
     data: { name: "Priya Sharma", email: "priya@example.com", password: pass("User@123"), phone: "+91 90000 11111" },
   });
-  const rahul = await db.user.create({
-    data: { name: "Rahul Verma", email: "rahul@example.com", password: pass("User@123"), phone: "+91 90000 22222" },
-  });
-  const sneha = await db.user.create({
-    data: { name: "Sneha Patel", email: "sneha@example.com", password: pass("User@123"), phone: "+91 90000 33333" },
-  });
+  // Demo customer accounts (used for sample product reviews below; found by email)
+  await db.user.create({ data: { name: "Rahul Verma", email: "rahul@example.com", password: pass("User@123"), phone: "+91 90000 22222" } });
+  await db.user.create({ data: { name: "Sneha Patel", email: "sneha@example.com", password: pass("User@123"), phone: "+91 90000 33333" } });
 
   // ---------- Settings ----------
   await db.siteSetting.create({
@@ -307,48 +305,8 @@ async function main() {
     });
   }
 
-  // ---------- Historical orders (for a real dashboard) ----------
-  const buyers = [priya, rahul, sneha];
-  const productNames = Object.keys(productMap);
-  const addressSnapshot = {
-    fullName: "Rahul Verma", phone: "+91 90000 22222", line1: "42, Green Park Colony",
-    line2: "Near Metro Station", city: "New Delhi", state: "Delhi", pincode: "110016", country: "India",
-  };
-
-  let orderSeq = 100001;
-  for (let day = 13; day >= 0; day--) {
-    const ordersToday = day % 3 === 0 ? 2 : 1;
-    for (let n = 0; n < ordersToday; n++) {
-      const buyer = buyers[(day + n) % buyers.length];
-      const itemCount = 1 + ((day + n) % 3);
-      const items: { productId: string; name: string; image: string; price: number; quantity: number }[] = [];
-      for (let i = 0; i < itemCount; i++) {
-        const pname = productNames[(day * 3 + n * 5 + i * 7) % productNames.length];
-        const prod = productMap[pname];
-        items.push({ productId: prod.id, name: prod.name, image: prod.image, price: prod.price, quantity: 1 + ((i + day) % 2) });
-      }
-      const subtotal = items.reduce((s, it) => s + it.price * it.quantity, 0);
-      const shipping = subtotal >= 99900 ? 0 : 4900;
-      const total = subtotal + shipping;
-      const createdAt = new Date(Date.now() - day * 86400000 - n * 3600000 * 5);
-      const status = day > 6 ? "DELIVERED" : day > 3 ? "SHIPPED" : day > 1 ? "CONFIRMED" : "PLACED";
-      const paymentStatus = (day + n) % 7 === 6 ? "PENDING" : "PAID";
-
-      const order = await db.order.create({
-        data: {
-          orderNumber: `SP-${orderSeq++}`,
-          userId: buyer.id,
-          addressJson: JSON.stringify({ ...addressSnapshot, fullName: buyer.name }),
-          subtotal, shipping, total,
-          paymentMethod: (day + n) % 3 === 0 ? "COD" : "RAZORPAY",
-          paymentStatus,
-          status: paymentStatus === "PENDING" && (day + n) % 7 === 6 ? "PLACED" : status,
-          createdAt,
-          items: { create: items },
-        },
-      });
-    }
-  }
+  // NOTE: No demo orders / payments are seeded — the admin dashboard and orders
+  // list start clean. Revenue and order stats will only reflect real activity.
 
   // ---------- Sample address for the demo customer ----------
   await db.address.create({

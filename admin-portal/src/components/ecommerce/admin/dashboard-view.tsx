@@ -112,18 +112,22 @@ export function DashboardView() {
               <CardTitle className="text-base">Orders by status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2.5">
-              {stats.statusBreakdown.map((s) => {
-                const pct = stats.orderCount ? Math.round((s.count / stats.orderCount) * 100) : 0;
-                return (
-                  <div key={s.status} className="flex items-center gap-2 text-sm">
-                    <StatusBadge status={s.status} className="w-24 justify-center" />
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+              {stats.statusBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No orders yet.</p>
+              ) : (
+                stats.statusBreakdown.map((s) => {
+                  const pct = stats.orderCount ? Math.round((s.count / stats.orderCount) * 100) : 0;
+                  return (
+                    <div key={s.status} className="flex items-center gap-2 text-sm">
+                      <StatusBadge status={s.status} className="w-24 justify-center" />
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="w-8 text-right font-semibold">{s.count}</span>
                     </div>
-                    <span className="w-8 text-right font-semibold">{s.count}</span>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </CardContent>
           </Card>
 
@@ -173,17 +177,25 @@ export function DashboardView() {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map((o) => (
-                  <tr key={o.id} className="border-b last:border-0">
-                    <td className="py-2.5 pr-4 font-semibold">{o.orderNumber}</td>
-                    <td className="py-2.5 pr-4">{o.customer || "—"}</td>
-                    <td className="py-2.5 pr-4 text-muted-foreground">{o.itemCount}</td>
-                    <td className="py-2.5 pr-4"><StatusBadge status={o.paymentStatus} /></td>
-                    <td className="py-2.5 pr-4"><StatusBadge status={o.status} /></td>
-                    <td className="py-2.5 pr-4 text-xs text-muted-foreground">{formatDateTime(o.createdAt)}</td>
-                    <td className="py-2.5 text-right font-bold">{formatINR(o.total)}</td>
+                {recentOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                      No orders yet — they&apos;ll appear here as customers place them.
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  recentOrders.map((o) => (
+                    <tr key={o.id} className="border-b last:border-0">
+                      <td className="py-2.5 pr-4 font-semibold">{o.orderNumber}</td>
+                      <td className="py-2.5 pr-4">{o.customer || "—"}</td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">{o.itemCount}</td>
+                      <td className="py-2.5 pr-4"><StatusBadge status={o.paymentStatus} /></td>
+                      <td className="py-2.5 pr-4"><StatusBadge status={o.status} /></td>
+                      <td className="py-2.5 pr-4 text-xs text-muted-foreground">{formatDateTime(o.createdAt)}</td>
+                      <td className="py-2.5 text-right font-bold">{formatINR(o.total)}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
