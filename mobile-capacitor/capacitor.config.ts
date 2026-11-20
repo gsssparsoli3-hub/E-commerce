@@ -4,7 +4,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * Base URL of the deployed Shoperic Next.js store.
  * Override with the STORE_URL environment variable (see .env.example).
  */
-const STORE_URL = process.env.STORE_URL ?? 'https://your-store-domain.com';
+const STORE_URL = process.env.STORE_URL ?? 'https://shoperic-store.vercel.app';
 
 const STORE_HOST = new URL(STORE_URL).hostname;
 

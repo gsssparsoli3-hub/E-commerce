@@ -82,7 +82,7 @@ export function Footer() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li><button onClick={() => navigate("/shop")} className="hover:text-foreground">All Products</button></li>
             <li><button onClick={() => navigate("/shop?sort=discount")} className="hover:text-foreground">Today&apos;s Deals</button></li>
-            <li><button onClick={() => navigate("/orders")} className="hover:text-foreground">Track Order</button></li>
+            <li><button onClick={() => navigate("/track")} className="hover:text-foreground">Track Order</button></li>
             <li><button onClick={() => navigate("/profile")} className="hover:text-foreground">My Account</button></li>
             <li><Link href="#/shop?sort=popular" className="hover:text-foreground">Best Sellers</Link></li>
           </ul>

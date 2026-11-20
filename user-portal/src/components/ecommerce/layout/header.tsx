@@ -232,6 +232,7 @@ function MobileMenu({ categories, onNavigate }: { categories: Category[]; onNavi
   const links = [
     { label: "Home", to: "/" },
     { label: "Shop All", to: "/shop" },
+    { label: "Track Order", to: "/track" },
     { label: "My Orders", to: "/orders" },
     { label: "Wishlist", to: "/wishlist" },
     { label: "Profile", to: "/profile" },

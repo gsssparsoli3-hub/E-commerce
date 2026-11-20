@@ -8,6 +8,7 @@ import { CheckoutView } from "./store/checkout-view";
 import { OrdersView } from "./store/orders-view";
 import { WishlistView } from "./store/wishlist-view";
 import { ProfileView } from "./store/profile-view";
+import { TrackView } from "./store/track-view";
 import { EmptyState } from "./shared/empty-state";
 import { Compass } from "lucide-react";
 import { useRoute, useRouterStore } from "@/stores/router";
@@ -27,6 +28,7 @@ export function AppRouter() {
     orders: "My Orders",
     wishlist: "My Wishlist",
     profile: "My Account",
+    track: "Track Order",
   };
   // product titles are set by ProductView (needs the fetched product name)
   useDocumentTitle(root && root !== "product" ? VIEW_TITLES[root] : null);
@@ -48,6 +50,8 @@ export function AppRouter() {
       return <WishlistView />;
     case "profile":
       return <ProfileView />;
+    case "track":
+      return <TrackView />;
     default:
       return <NotFound onHome={() => navigate("/")} />;
   }
