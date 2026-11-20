@@ -119,7 +119,7 @@ function LoginScreen() {
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="admin@example.com"
+              placeholder="you@yourstore.com"
               required
               autoComplete="email"
               autoFocus

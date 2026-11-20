@@ -359,9 +359,7 @@ async function main() {
     },
   });
 
-  console.log("Seed complete!");
-  console.log("Admin login:    admin@shoperic.com / Admin@123");
-  console.log("Customer login: priya@example.com / User@123");
+  console.log("Seed complete! Set admin credentials via your production admin flow.");
 }
 
 main()

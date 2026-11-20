@@ -152,7 +152,9 @@ export function AuthModal() {
         </form>
 
         <p className="text-center text-xs text-muted-foreground">
-          Demo customer: priya@example.com / User@123
+          {mode === "login"
+            ? "New here? Switch to Register — it takes less than a minute."
+            : "Already have an account? Switch to Sign in."}
         </p>
       </DialogContent>
     </Dialog>

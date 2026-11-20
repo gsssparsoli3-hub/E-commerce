@@ -19,7 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
   let title = "Shoperic — Online Shopping";
   let description = "Shop electronics, fashion, home essentials and more.";
   let keywords: string | undefined;
-  let icons: Metadata["icons"] = [{ url: "/brand/favicon.svg", type: "image/svg+xml" }];
+  // Default: runtime-generated branded letter-icon (see src/app/icon.tsx).
+  let icons: Metadata["icons"] = [{ url: "/icon", type: "image/png" }];
 
   try {
     const { db } = await import("@/lib/db");

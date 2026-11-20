@@ -14,11 +14,31 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Admin Console",
-  description: "Store administration panel",
-  robots: { index: false, follow: false },
-};
+/** SEO + branding metadata is admin-controlled (Settings → Branding). */
+export async function generateMetadata(): Promise<Metadata> {
+  let title = "Admin Console";
+  let description = "Store administration panel";
+  let icons: Metadata["icons"] = [{ url: "/icon", type: "image/png" }];
+
+  try {
+    const { db } = await import("@/lib/db");
+    const s = await db.siteSetting.findUnique({ where: { id: "singleton" } });
+    if (s) {
+      title = `${s.siteName} — Admin Console`;
+      description = `Administration panel for ${s.siteName}.`;
+      if (s.faviconUrl) icons = [{ url: s.faviconUrl }];
+    }
+  } catch {
+    // database unavailable — fall back to safe defaults
+  }
+
+  return {
+    title,
+    description,
+    icons,
+    robots: { index: false, follow: false },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
