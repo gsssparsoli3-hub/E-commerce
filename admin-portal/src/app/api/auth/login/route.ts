@@ -7,7 +7,7 @@ import { rateLimit, clientKey } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
-    if (!rateLimit(clientKey(req, "login"), 10, 60_000)) {
+    if (!rateLimit(clientKey(req, "admin-login"), 10, 60_000)) {
       return badRequest("Too many attempts. Please try again in a minute.");
     }
 

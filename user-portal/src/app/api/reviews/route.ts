@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { json, badRequest, notFound, serverError, unauthorized } from "@/lib/api-helpers";
 import { getSessionUser } from "@/lib/auth";
+import { rateLimit, clientKey } from "@/lib/rate-limit";
 
 // GET /api/reviews?productId= — published reviews for a product
 export async function GET(req: NextRequest) {
@@ -27,6 +28,10 @@ export async function GET(req: NextRequest) {
 // POST /api/reviews — create/update own review (one per product)
 export async function POST(req: NextRequest) {
   try {
+    if (!rateLimit(clientKey(req, "review"), 5, 60_000)) {
+      return badRequest("Too many attempts. Please wait a minute and try again.");
+    }
+
     const user = await getSessionUser(req);
     if (!user) return unauthorized("Sign in to write a review");
 

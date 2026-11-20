@@ -91,7 +91,7 @@ export function AdminCategoriesView() {
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(c)} aria-label="Edit category">
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleting(c)} aria-label="Delete category" disabled={c.productCount > 0}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleting(c)} aria-label="Delete category" disabled={(c.productCount ?? 0) > 0}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

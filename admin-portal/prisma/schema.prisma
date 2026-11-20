@@ -27,9 +27,23 @@ model User {
   reviews       Review[]
   cartItems     CartItem[]
   wishlistItems WishlistItem[]
+  resetTokens   PasswordResetToken[]
 
   @@index([role])
   @@index([status])
+}
+
+// Password reset tokens (single-use, 1h expiry)
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Address {
@@ -266,6 +280,13 @@ model SiteSetting {
   razorpayEnabled    Boolean  @default(false)
   razorpayKeyId      String?
   razorpayKeySecret  String?
+  razorpayWebhookSecret String? // for verifying webhook signatures
+  // Email (SMTP — provider-agnostic: Gmail, SES, Resend SMTP, Brevo…)
+  smtpHost           String?
+  smtpPort           Int      @default(587)
+  smtpUser           String?
+  smtpPass           String?
+  smtpFrom           String?  // e.g. "Shoperic <orders@shoperic.com>"
   // Shipping (paise)
   shippingFee        Int      @default(4900)
   freeShippingAbove  Int      @default(99900)

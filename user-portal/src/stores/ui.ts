@@ -2,10 +2,12 @@
 
 import { create } from "zustand";
 
+type AuthMode = "login" | "register" | "forgot";
+
 type UiState = {
-  authModal: { open: boolean; mode: "login" | "register" };
+  authModal: { open: boolean; mode: AuthMode };
   mobileNavOpen: boolean;
-  openAuth: (mode?: "login" | "register") => void;
+  openAuth: (mode?: AuthMode) => void;
   closeAuth: () => void;
   setMobileNav: (open: boolean) => void;
 };

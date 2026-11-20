@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest) {
     if (!session) return unauthorized();
 
     const body = await req.json();
-    const updates: { name?: string; phone?: string; password?: string } = {};
+    const updates: { name?: string; phone?: string | null; password?: string } = {};
 
     if (body.name !== undefined) {
       const name = String(body.name).trim();

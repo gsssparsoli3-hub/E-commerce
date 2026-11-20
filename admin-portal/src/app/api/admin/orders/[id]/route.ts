@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { json, badRequest, notFound, forbidden, serverError } from "@/lib/api-helpers";
 import { requireAdmin } from "@/lib/auth";
 import { serializeOrder } from "@/lib/serializers";
-import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/format";
+import { ORDER_STATUSES, PAYMENT_STATUSES, formatINR } from "@/lib/format";
+import { sendEmail, emailButton } from "@/lib/email";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -151,6 +152,61 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         user: { select: { id: true, name: true, email: true } },
       },
     });
+
+    // ---- Order lifecycle emails (fire-and-forget — a failure here must never break the PATCH) ----
+    // Only on a real transition, and only for the three customer-facing milestones.
+    const newStatus = typeof data.status === "string" && data.status !== order.status ? data.status : null;
+    if (
+      updated?.user.email &&
+      newStatus && (newStatus === "SHIPPED" || newStatus === "DELIVERED" || newStatus === "CANCELLED")
+    ) {
+      try {
+        const settings = await db.siteSetting.findUnique({ where: { id: "singleton" }, select: { storeUrl: true } });
+        const storeUrl = settings?.storeUrl || req.headers.get("origin") || "";
+        const { name, email } = updated.user;
+
+        if (newStatus === "SHIPPED") {
+          const trackUrl = updated.trackingUrl || (storeUrl ? `${storeUrl}/#/track` : "");
+          sendEmail({
+            to: email,
+            subject: `Your order ${order.orderNumber} has shipped!`,
+            html: `
+              <p>Hi ${name}, good news — order <strong>${order.orderNumber}</strong> is on its way!</p>
+              ${updated.courierName || updated.trackingNumber
+                ? `<p>Courier: <strong>${updated.courierName || "—"}</strong> · Tracking number: <strong style="font-family:monospace;">${updated.trackingNumber || "—"}</strong></p>`
+                : ""}
+              ${trackUrl ? emailButton(trackUrl, "Track shipment") : ""}
+              <p>Estimated delivery: 3-5 business days.</p>
+            `,
+          }).catch(() => null);
+        } else if (newStatus === "DELIVERED") {
+          sendEmail({
+            to: email,
+            subject: `Your order ${order.orderNumber} was delivered`,
+            html: `
+              <p>Hi ${name}, your order <strong>${order.orderNumber}</strong> was delivered.</p>
+              <p>If you have a moment, leave a review to help other shoppers!</p>
+            `,
+          }).catch(() => null);
+        } else {
+          // CANCELLED — mention the refund only when the payment actually became REFUNDED in this update
+          const refunded = updated.paymentStatus === "REFUNDED" && order.paymentStatus !== "REFUNDED";
+          sendEmail({
+            to: email,
+            subject: `Order ${order.orderNumber} cancelled`,
+            html: `
+              <p>Hi ${name}, your order <strong>${order.orderNumber}</strong> has been cancelled.</p>
+              ${refunded
+                ? `<p>Your refund of <strong>${formatINR(order.total)}</strong> has been initiated and will reflect in your account in 5-7 business days.</p>`
+                : ""}
+            `,
+          }).catch(() => null);
+        }
+      } catch {
+        // Email preparation must never surface an error to the admin
+      }
+    }
+
     return json({
       order: { ...serializeOrder(updated!), customer: updated!.user.name, customerEmail: updated!.user.email },
     });

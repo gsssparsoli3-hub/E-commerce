@@ -19,6 +19,9 @@ export function PaymentsTab({
   razorpaySecret,
   setRazorpayKeyId,
   setRazorpaySecret,
+  webhookSecret,
+  setWebhookSecret,
+  hasWebhookSecret,
 }: {
   settings: SiteSettings;
   set: <K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) => void;
@@ -27,6 +30,10 @@ export function PaymentsTab({
   razorpaySecret: string;
   setRazorpayKeyId: (v: string) => void;
   setRazorpaySecret: (v: string) => void;
+  /** Optional until the parent wires it up — guarded below so the tab renders standalone. */
+  webhookSecret?: string;
+  setWebhookSecret?: (v: string) => void;
+  hasWebhookSecret?: boolean;
 }) {
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; mode: string | null; message: string } | null>(null);
@@ -122,6 +129,33 @@ export function PaymentsTab({
                   className="font-mono"
                 />
               </Field>
+
+              {/* Webhook secret (optional prop — render only when the parent wires it up) */}
+              {setWebhookSecret && (
+                <Field
+                  label={`Razorpay Webhook Secret ${hasWebhookSecret ? "(saved — leave blank to keep)" : "(optional — enables auto-confirmation)"}`}
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    type="password"
+                    value={webhookSecret}
+                    onChange={(e) => setWebhookSecret?.(e.target.value)}
+                    placeholder={hasWebhookSecret ? "••••••••••••" : "Enter webhook secret from Razorpay Dashboard → Settings → Webhooks"}
+                    className="font-mono"
+                  />
+                </Field>
+              )}
+
+              {/* Webhook setup info */}
+              <div className="rounded-lg border bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground sm:col-span-2">
+                <p>
+                  <span className="font-semibold text-foreground">Webhook URL</span> to register in Razorpay
+                  Dashboard: <span className="break-all font-mono">https://your-store-domain/api/payments/razorpay/webhook</span> —
+                  events: <span className="font-mono">payment.captured</span>,{" "}
+                  <span className="font-mono">payment.failed</span>, <span className="font-mono">refund.processed</span>.
+                  This auto-confirms orders even if the customer closes the browser mid-payment.
+                </p>
+              </div>
 
               {/* Test connection */}
               <div className="flex flex-wrap items-center gap-2 sm:col-span-2">

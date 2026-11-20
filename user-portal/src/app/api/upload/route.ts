@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { json, badRequest, serverError, unauthorized } from "@/lib/api-helpers";
 import { getSessionUser } from "@/lib/auth";
+import { rateLimit, clientKey } from "@/lib/rate-limit";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml", "image/x-icon", "image/vnd.microsoft.icon"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -59,6 +60,10 @@ async function localUpload(file: File, filename: string): Promise<string> {
 // POST /api/upload — logged-in users can upload (avatars, review images)
 export async function POST(req: NextRequest) {
   try {
+    if (!rateLimit(clientKey(req, "upload"), 10, 60_000)) {
+      return badRequest("Too many uploads. Please wait a minute and try again.");
+    }
+
     const user = await getSessionUser(req);
     if (!user) return unauthorized("Sign in to upload images");
 

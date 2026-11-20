@@ -14,7 +14,12 @@ export async function GET(req: NextRequest) {
 
     let setting = await db.siteSetting.findUnique({ where: { id: "singleton" } });
     if (!setting) setting = await db.siteSetting.create({ data: { id: "singleton" } });
-    return json({ settings: serializeSettings(setting), hasRazorpayKeys: Boolean(setting.razorpayKeyId && setting.razorpayKeySecret) });
+    return json({
+      settings: serializeSettings(setting),
+      hasRazorpayKeys: Boolean(setting.razorpayKeyId && setting.razorpayKeySecret),
+      hasWebhookSecret: Boolean(setting.razorpayWebhookSecret),
+      hasSMTP: Boolean(setting.smtpHost && setting.smtpUser && setting.smtpPass),
+    });
   } catch (error) {
     return serverError(error);
   }
@@ -60,6 +65,14 @@ export async function PUT(req: NextRequest) {
 
     if (body.razorpayKeyId !== undefined) data.razorpayKeyId = String(body.razorpayKeyId).trim() || null;
     if (body.razorpayKeySecret !== undefined) data.razorpayKeySecret = String(body.razorpayKeySecret).trim() || null;
+    if (body.razorpayWebhookSecret !== undefined) data.razorpayWebhookSecret = String(body.razorpayWebhookSecret).trim() || null;
+
+    // SMTP (email) settings
+    if (body.smtpHost !== undefined) data.smtpHost = String(body.smtpHost).trim() || null;
+    if (body.smtpPort !== undefined) data.smtpPort = Math.round(Number(body.smtpPort)) || 587;
+    if (body.smtpUser !== undefined) data.smtpUser = String(body.smtpUser).trim() || null;
+    if (body.smtpPass !== undefined) data.smtpPass = String(body.smtpPass) || null;
+    if (body.smtpFrom !== undefined) data.smtpFrom = String(body.smtpFrom).trim() || null;
 
     if (body.social !== undefined && typeof body.social === "object") {
       data.socialJson = JSON.stringify(body.social);
@@ -73,7 +86,12 @@ export async function PUT(req: NextRequest) {
       update: data,
       create: { id: "singleton", ...data },
     });
-    return json({ settings: serializeSettings(setting), hasRazorpayKeys: Boolean(setting.razorpayKeyId && setting.razorpayKeySecret) });
+    return json({
+      settings: serializeSettings(setting),
+      hasRazorpayKeys: Boolean(setting.razorpayKeyId && setting.razorpayKeySecret),
+      hasWebhookSecret: Boolean(setting.razorpayWebhookSecret),
+      hasSMTP: Boolean(setting.smtpHost && setting.smtpUser && setting.smtpPass),
+    });
   } catch (error) {
     return serverError(error);
   }

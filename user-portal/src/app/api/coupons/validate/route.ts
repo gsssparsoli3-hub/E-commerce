@@ -2,10 +2,16 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { json, badRequest, serverError, unauthorized } from "@/lib/api-helpers";
 import { getSessionUser } from "@/lib/auth";
+import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { computeDiscount } from "@/lib/pricing";
 
 export async function POST(req: NextRequest) {
   try {
+    // Brute-force protection — coupon codes are short and guessable
+    if (!rateLimit(clientKey(req, "coupon-validate"), 10, 60_000)) {
+      return badRequest("Too many attempts. Please wait a minute and try again.");
+    }
+
     const user = await getSessionUser(req);
     if (!user) return unauthorized("Sign in to apply coupons");
 

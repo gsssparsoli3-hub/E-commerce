@@ -14,8 +14,25 @@ async function getSettings() {
   }
 }
 
+// First active HERO banner (ordered by sortOrder) doubles as the social-share
+// image; falls back to a bundled brand banner when none exists or the DB is
+// unreachable. (Mirrors the og:image resolution in the root layout — page-level
+// openGraph/twitter objects fully replace the layout's, so both must set it.)
+async function getOgImage() {
+  try {
+    const banner = await db.banner.findFirst({
+      where: { position: "HERO", status: "ACTIVE" },
+      orderBy: { sortOrder: "asc" },
+      select: { image: true },
+    });
+    return banner?.image || "/brand/banner-sale.jpg";
+  } catch {
+    return "/brand/banner-sale.jpg";
+  }
+}
+
 export async function generateMetadata(): Promise<Metadata> {
-  const s = await getSettings();
+  const [s, ogImage] = await Promise.all([getSettings(), getOgImage()]);
   const name = s?.siteName ?? "Shoperic";
   const title = s?.seoTitle || `${name} — ${s?.tagline ?? "Online Shopping"}`;
   const description = s?.seoDescription || s?.tagline || "Shop the best products at the best prices.";
@@ -36,8 +53,14 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       siteName: name,
       type: "website",
+      images: [{ url: ogImage }],
     },
-    twitter: { card: "summary_large_image", title, description },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [{ url: ogImage }],
+    },
     robots: { index: true, follow: true },
   };
 }

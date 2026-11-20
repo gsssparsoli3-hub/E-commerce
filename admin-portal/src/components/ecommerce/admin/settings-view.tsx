@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CreditCard, Globe, Loader2, Megaphone, Palette, Save, Ship, Sparkles } from "lucide-react";
+import { CreditCard, Globe, Loader2, Mail, Megaphone, Palette, Save, Ship, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,13 +11,21 @@ import type { SiteSettings } from "@/types";
 import { GeneralTab } from "./settings/general-tab";
 import { BrandingTab } from "./settings/branding-tab";
 import { PaymentsTab } from "./settings/payments-tab";
+import { EmailTab, type SMTPForm } from "./settings/email-tab";
 import { ShippingTab } from "./settings/shipping-tab";
 import { FeaturesTab } from "./settings/features-tab";
 import { SeoTab } from "./settings/seo-tab";
 
+type SettingsResponse = {
+  settings: SiteSettings;
+  hasRazorpayKeys: boolean;
+  hasSMTP: boolean;
+  hasWebhookSecret: boolean;
+};
+
 /**
- * Admin settings — orchestrates 6 tabs (General, Branding, Payments, Shipping,
- * Features, SEO). Each tab is a small presentational component in
+ * Admin settings — orchestrates 7 tabs (General, Branding, Payments, Email,
+ * Shipping, Features, SEO). Each tab is a small presentational component in
  * ./settings/*.tsx; this file owns state + the save action.
  */
 export function AdminSettingsView() {
@@ -27,12 +35,18 @@ export function AdminSettingsView() {
   const [busy, setBusy] = useState(false);
   const [razorpayKeyId, setRazorpayKeyId] = useState("");
   const [razorpaySecret, setRazorpaySecret] = useState("");
+  const [smtp, setSmtp] = useState<SMTPForm>({ host: "", port: "587", user: "", pass: "", from: "" });
+  const [hasSMTP, setHasSMTP] = useState(false);
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [hasWebhookSecret, setHasWebhookSecret] = useState(false);
 
   useEffect(() => {
-    api<{ settings: SiteSettings; hasRazorpayKeys: boolean }>("/admin/settings")
+    api<SettingsResponse>("/admin/settings")
       .then((r) => {
         setSettings(r.settings);
         setHasKeys(r.hasRazorpayKeys);
+        setHasSMTP(r.hasSMTP);
+        setHasWebhookSecret(r.hasWebhookSecret);
       })
       .catch(() => null);
   }, []);
@@ -72,14 +86,30 @@ export function AdminSettingsView() {
       if (razorpayKeyId.trim()) payload.razorpayKeyId = razorpayKeyId.trim();
       if (razorpaySecret) payload.razorpayKeySecret = razorpaySecret;
 
-      const res = await api<{ settings: SiteSettings; hasRazorpayKeys: boolean }>("/admin/settings", {
+      // SMTP (email) — blank fields keep the saved values, same contract as the Razorpay secret.
+      // The port travels with the host (re-configuring SMTP implies the port shown in the form).
+      if (smtp.host.trim()) {
+        payload.smtpHost = smtp.host.trim();
+        const port = Math.round(Number(smtp.port));
+        if (smtp.port.trim() && port > 0) payload.smtpPort = port;
+      }
+      if (smtp.user.trim()) payload.smtpUser = smtp.user.trim();
+      if (smtp.pass) payload.smtpPass = smtp.pass;
+      if (smtp.from.trim()) payload.smtpFrom = smtp.from.trim();
+      if (webhookSecret.trim()) payload.razorpayWebhookSecret = webhookSecret.trim();
+
+      const res = await api<SettingsResponse>("/admin/settings", {
         method: "PUT",
         body: JSON.stringify(payload),
       });
       setSettings(res.settings);
       setHasKeys(res.hasRazorpayKeys);
+      setHasSMTP(res.hasSMTP);
+      setHasWebhookSecret(res.hasWebhookSecret);
       setRazorpayKeyId("");
       setRazorpaySecret("");
+      setWebhookSecret("");
+      setSmtp((s) => ({ ...s, pass: "" }));
       await refetchSettings(); // live-apply color/name across the app
       toast.success("Settings saved — applied across the store");
     } catch (error) {
@@ -112,6 +142,7 @@ export function AdminSettingsView() {
           <TabsTrigger value="general" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> General</TabsTrigger>
           <TabsTrigger value="branding" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> Branding</TabsTrigger>
           <TabsTrigger value="payments" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" /> Payments</TabsTrigger>
+          <TabsTrigger value="email" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</TabsTrigger>
           <TabsTrigger value="shipping" className="gap-1.5"><Ship className="h-3.5 w-3.5" /> Shipping</TabsTrigger>
           <TabsTrigger value="features" className="gap-1.5"><Sparkles className="h-3.5 w-3.5" /> Features</TabsTrigger>
           <TabsTrigger value="seo" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> SEO</TabsTrigger>
@@ -128,7 +159,13 @@ export function AdminSettingsView() {
             razorpaySecret={razorpaySecret}
             setRazorpayKeyId={setRazorpayKeyId}
             setRazorpaySecret={setRazorpaySecret}
+            webhookSecret={webhookSecret}
+            setWebhookSecret={setWebhookSecret}
+            hasWebhookSecret={hasWebhookSecret}
           />
+        </TabsContent>
+        <TabsContent value="email">
+          <EmailTab smtp={smtp} setSmtp={setSmtp} hasSMTP={hasSMTP} />
         </TabsContent>
         <TabsContent value="shipping"><ShippingTab settings={settings} set={set} /></TabsContent>
         <TabsContent value="features"><FeaturesTab settings={settings} set={set} /></TabsContent>

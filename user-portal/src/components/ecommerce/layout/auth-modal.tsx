@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, LogIn, MailCheck, Send, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -13,6 +13,7 @@ import { useUiStore } from "@/stores/ui";
 import { useAuthStore } from "@/stores/auth";
 import { useCartStore } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
+import { api } from "@/lib/client-api";
 
 export function AuthModal() {
   const { authModal, closeAuth, openAuth } = useUiStore();
@@ -21,14 +22,31 @@ export function AuthModal() {
   const refreshWishlist = useWishlistStore((s) => s.refresh);
 
   const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false); // forgot-password: link-sent confirmation
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
 
   const mode = authModal.mode;
+
+  // Reset the confirmation state whenever we leave the "forgot" tab
+  useEffect(() => {
+    if (mode !== "forgot") setSent(false);
+  }, [mode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
+      if (mode === "forgot") {
+        // Responds identically for known and unknown emails (no enumeration);
+        // only validation errors or rate limiting throw here.
+        await api("/auth/forgot-password", {
+          method: "POST",
+          body: JSON.stringify({ email: form.email }),
+        });
+        setSent(true);
+        return;
+      }
+
       if (mode === "login") {
         const user = await login(form.email, form.password);
         toast.success(`Welcome back, ${user.name.split(" ")[0]}!`);
@@ -51,111 +69,162 @@ export function AuthModal() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            {mode === "login" ? "Welcome back" : "Create your account"}
+            {mode === "forgot" ? "Reset your password" : mode === "login" ? "Welcome back" : "Create your account"}
           </DialogTitle>
           <DialogDescription>
-            {mode === "login"
-              ? "Sign in to your account to continue shopping."
-              : "Join us today — it takes less than a minute."}
+            {mode === "forgot"
+              ? "Enter your account email and we'll send you a reset link."
+              : mode === "login"
+                ? "Sign in to your account to continue shopping."
+                : "Join us today — it takes less than a minute."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg bg-muted p-1" role="tablist">
-          <button
-            role="tab"
-            aria-selected={mode === "login"}
-            onClick={() => openAuth("login")}
-            className={`rounded-md py-2 text-sm font-semibold transition-colors ${
-              mode === "login" ? "bg-background shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            role="tab"
-            aria-selected={mode === "register"}
-            onClick={() => openAuth("register")}
-            className={`rounded-md py-2 text-sm font-semibold transition-colors ${
-              mode === "register" ? "bg-background shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            Register
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          {mode === "register" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="auth-name">Full name</Label>
-              <Input
-                id="auth-name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Priya Sharma"
-                required
-                minLength={2}
-                autoComplete="name"
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="auth-email">Email</Label>
-            <Input
-              id="auth-email"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-            />
+        {mode === "forgot" && sent ? (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <MailCheck className="h-6 w-6 text-primary" />
+            </span>
+            <p className="text-sm font-medium">
+              If an account exists with this email, we&rsquo;ve sent a reset link.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              The link expires in 1 hour — check your inbox (and spam folder).
+            </p>
+            <Button variant="outline" className="w-full" onClick={() => openAuth("login")}>
+              Back to sign in
+            </Button>
           </div>
-
-          {mode === "register" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="auth-phone">Phone (optional)</Label>
-              <Input
-                id="auth-phone"
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+91 90000 00000"
-                autoComplete="tel"
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="auth-password">Password</Label>
-            <Input
-              id="auth-password"
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="••••••••"
-              required
-              minLength={6}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-            />
-          </div>
-
-          <Button type="submit" className="w-full" size="lg" disabled={busy}>
-            {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : mode === "login" ? (
-              <><LogIn className="h-4 w-4" /> Sign in</>
-            ) : (
-              <><UserPlus className="h-4 w-4" /> Create account</>
+        ) : (
+          <>
+            {mode !== "forgot" && (
+              <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg bg-muted p-1" role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={mode === "login"}
+                  onClick={() => openAuth("login")}
+                  className={`rounded-md py-2 text-sm font-semibold transition-colors ${
+                    mode === "login" ? "bg-background shadow-sm" : "text-muted-foreground"
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={mode === "register"}
+                  onClick={() => openAuth("register")}
+                  className={`rounded-md py-2 text-sm font-semibold transition-colors ${
+                    mode === "register" ? "bg-background shadow-sm" : "text-muted-foreground"
+                  }`}
+                >
+                  Register
+                </button>
+              </div>
             )}
-          </Button>
-        </form>
 
-        <p className="text-center text-xs text-muted-foreground">
-          {mode === "login"
-            ? "New here? Switch to Register — it takes less than a minute."
-            : "Already have an account? Switch to Sign in."}
-        </p>
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              {mode === "register" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="auth-name">Full name</Label>
+                  <Input
+                    id="auth-name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="Priya Sharma"
+                    required
+                    minLength={2}
+                    autoComplete="name"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label htmlFor="auth-email">Email</Label>
+                <Input
+                  id="auth-email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+
+              {mode === "register" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="auth-phone">Phone (optional)</Label>
+                  <Input
+                    id="auth-phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="+91 90000 00000"
+                    autoComplete="tel"
+                  />
+                </div>
+              )}
+
+              {mode !== "forgot" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="auth-password">Password</Label>
+                  <Input
+                    id="auth-password"
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                    autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  />
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" size="lg" disabled={busy}>
+                {busy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : mode === "login" ? (
+                  <><LogIn className="h-4 w-4" /> Sign in</>
+                ) : mode === "forgot" ? (
+                  <><Send className="h-4 w-4" /> Send reset link</>
+                ) : (
+                  <><UserPlus className="h-4 w-4" /> Create account</>
+                )}
+              </Button>
+
+              {mode === "login" && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => openAuth("forgot")}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
+              {mode === "forgot" && (
+                <button
+                  type="button"
+                  onClick={() => openAuth("login")}
+                  className="block text-xs font-medium text-primary hover:underline"
+                >
+                  ← Back to sign in
+                </button>
+              )}
+            </form>
+
+            <p className="text-center text-xs text-muted-foreground">
+              {mode === "forgot"
+                ? "Reset links expire after 1 hour and can only be used once."
+                : mode === "login"
+                  ? "New here? Switch to Register — it takes less than a minute."
+                  : "Already have an account? Switch to Sign in."}
+            </p>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

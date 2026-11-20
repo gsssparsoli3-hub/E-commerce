@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { json, badRequest, notFound, serverError, unauthorized } from "@/lib/api-helpers";
 import { getSessionUser } from "@/lib/auth";
+import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { serializeProduct, productInclude } from "@/lib/serializers";
 
 async function getCart(userId: string) {
@@ -26,6 +27,10 @@ export async function GET(req: NextRequest) {
 // POST /api/cart — add to cart (or increment quantity)
 export async function POST(req: NextRequest) {
   try {
+    if (!rateLimit(clientKey(req, "cart"), 60, 60_000)) {
+      return badRequest("Too many requests. Please slow down and try again shortly.");
+    }
+
     const user = await getSessionUser(req);
     if (!user) return unauthorized("Sign in to add items to your cart");
 

@@ -3,6 +3,8 @@ import crypto from "crypto";
 import { db } from "@/lib/db";
 import { json, badRequest, notFound, serverError, unauthorized } from "@/lib/api-helpers";
 import { getSessionUser } from "@/lib/auth";
+import { formatINR } from "@/lib/format";
+import { sendEmail, emailButton } from "@/lib/email";
 
 /**
  * POST /api/payments/razorpay/verify
@@ -25,6 +27,7 @@ export async function POST(req: NextRequest) {
 
     const order = await db.order.findFirst({
       where: { razorpayOrderId: razorpay_order_id, userId: user.id },
+      include: { user: { select: { email: true, name: true } } },
     });
     if (!order) return notFound("Order not found for this payment");
 
@@ -63,6 +66,20 @@ export async function POST(req: NextRequest) {
         ...(order.status === "PLACED" ? [{ orderId: order.id, type: "STATUS", value: "CONFIRMED", note: "Auto-confirmed after payment", createdBy: "system" }] : []),
       ],
     });
+
+    // ---- "Payment successful" email (fire-and-forget — never blocks the response) ----
+    const origin = req.headers.get("origin") || req.nextUrl.origin;
+    sendEmail({
+      to: order.user.email,
+      subject: `Payment received — order ${order.orderNumber}`,
+      html: `
+        <p>Hi ${order.user.name}, your payment of <strong>${formatINR(order.total)}</strong> for order
+        <strong>${order.orderNumber}</strong> was successful.</p>
+        <p>Payment ID: <span style="font-family:monospace;">${razorpay_payment_id}</span></p>
+        <p>Your order is confirmed and will be shipped soon.</p>
+        ${emailButton(`${origin}/#/orders`, "Track my order")}
+      `,
+    }).catch(() => null);
 
     return json({ ok: true, order: { id: updated.id, orderNumber: updated.orderNumber, paymentStatus: updated.paymentStatus } });
   } catch (error) {

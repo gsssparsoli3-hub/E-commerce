@@ -87,7 +87,8 @@ export function ReviewSection({
         delete next[reviewId];
         return next;
       }
-      return { ...prev, [reviewId]: (reviews.find((r) => r.id === reviewId)?.helpful ?? 0) + 1 };
+      // Local optimistic upvote — starts at 1, no server round-trip needed
+      return { ...prev, [reviewId]: 1 };
     });
   }
 

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { json, badRequest, notFound, serverError, unauthorized } from "@/lib/api-helpers";
 import { getSessionUser } from "@/lib/auth";
+import { rateLimit, clientKey } from "@/lib/rate-limit";
 
 function validateAddress(body: Record<string, unknown>) {
   const fields = ["fullName", "phone", "line1", "city", "state", "pincode"] as const;
@@ -30,6 +31,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!rateLimit(clientKey(req, "addresses"), 20, 60_000)) {
+      return badRequest("Too many requests. Please wait a minute and try again.");
+    }
+
     const user = await getSessionUser(req);
     if (!user) return unauthorized();
 
@@ -66,6 +71,10 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    if (!rateLimit(clientKey(req, "addresses"), 20, 60_000)) {
+      return badRequest("Too many requests. Please wait a minute and try again.");
+    }
+
     const user = await getSessionUser(req);
     if (!user) return unauthorized();
 

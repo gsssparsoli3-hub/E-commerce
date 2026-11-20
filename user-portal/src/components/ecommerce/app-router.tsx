@@ -9,6 +9,7 @@ import { OrdersView } from "./store/orders-view";
 import { WishlistView } from "./store/wishlist-view";
 import { ProfileView } from "./store/profile-view";
 import { TrackView } from "./store/track-view";
+import { ResetPasswordView } from "./store/reset-password-view";
 import { EmptyState } from "./shared/empty-state";
 import { Compass } from "lucide-react";
 import { useRoute, useRouterStore } from "@/stores/router";
@@ -29,6 +30,7 @@ export function AppRouter() {
     wishlist: "My Wishlist",
     profile: "My Account",
     track: "Track Order",
+    "reset-password": "Reset Password",
   };
   // product titles are set by ProductView (needs the fetched product name)
   useDocumentTitle(root && root !== "product" ? VIEW_TITLES[root] : null);
@@ -52,6 +54,8 @@ export function AppRouter() {
       return <ProfileView />;
     case "track":
       return <TrackView />;
+    case "reset-password":
+      return <ResetPasswordView />;
     default:
       return <NotFound onHome={() => navigate("/")} />;
   }

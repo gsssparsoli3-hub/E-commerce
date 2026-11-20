@@ -4,6 +4,8 @@ import { json, badRequest, serverError, unauthorized } from "@/lib/api-helpers";
 import { getSessionUser } from "@/lib/auth";
 import { serializeOrder } from "@/lib/serializers";
 import { computeDiscount, computeShipping } from "@/lib/pricing";
+import { formatINR } from "@/lib/format";
+import { sendEmail, emailButton } from "@/lib/email";
 
 const orderWithItems = {
   items: true,
@@ -178,6 +180,24 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(body.items)) {
       await db.cartItem.deleteMany({ where: { userId: user.id } });
     }
+
+    // ---- "Order received" email (fire-and-forget — never blocks the response) ----
+    const origin = req.headers.get("origin") || req.nextUrl.origin;
+    sendEmail({
+      to: user.email,
+      subject: `We've received your order ${orderNumber}`,
+      html: `
+        <p>Hi ${user.name}, thanks for your order!</p>
+        <p>Order <strong>${order.orderNumber}</strong> for <strong>${formatINR(order.total)}</strong>
+        (${paymentMethod === "COD" ? "Cash on Delivery" : "Online Payment"}) is placed and being processed.</p>
+        <p style="margin-bottom:4px;">Items in this order:</p>
+        <ul style="margin:0;padding-left:20px;">${order.items
+          .map((it) => `<li>${it.name} × ${it.quantity}</li>`)
+          .join("")}</ul>
+        ${emailButton(`${origin}/#/orders`, "View my order")}
+        <p>We'll email you when it ships.</p>
+      `,
+    }).catch(() => null);
 
     return json({ order: serializeOrder(order), razorpay });
   } catch (error) {

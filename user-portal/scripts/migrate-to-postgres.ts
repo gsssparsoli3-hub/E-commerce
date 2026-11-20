@@ -8,6 +8,7 @@
  * Preserves every row and every original id/timestamp, so the admin
  * dashboard, orders history and accounts survive the migration intact.
  */
+// @ts-ignore — bun:sqlite exists at runtime under Bun; tsc doesn't know its types
 import { Database } from "bun:sqlite";
 import { PrismaClient } from "@prisma/client";
 
