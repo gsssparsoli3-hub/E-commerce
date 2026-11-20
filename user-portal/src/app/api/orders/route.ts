@@ -7,6 +7,7 @@ import { computeDiscount, computeShipping } from "@/lib/pricing";
 
 const orderWithItems = {
   items: true,
+  events: { orderBy: { createdAt: "asc" as const } },
 } as const;
 
 export async function GET(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
     const orders = await db.order.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
-      include: orderWithItems,
+      include: { items: true, events: { orderBy: { createdAt: "asc" } } },
     });
     return json({ orders: orders.map(serializeOrder) });
   } catch (error) {
@@ -137,6 +138,7 @@ export async function POST(req: NextRequest) {
           paymentStatus: "PENDING",
           status: "PLACED",
           items: { create: lineItems },
+          events: { create: { type: "STATUS", value: "PLACED", note: "Order placed by customer", createdBy: user.email } },
         },
         include: orderWithItems,
       });

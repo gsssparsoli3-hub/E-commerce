@@ -51,8 +51,17 @@ export async function POST(req: NextRequest) {
         paymentStatus: "PAID",
         paymentId: razorpay_payment_id,
         status: order.status === "PLACED" ? "CONFIRMED" : order.status,
+        confirmedAt: order.status === "PLACED" ? new Date() : order.confirmedAt,
       },
       include: { items: true },
+    });
+
+    // Audit: payment captured + (optional) auto-confirm
+    await db.orderEvent.createMany({
+      data: [
+        { orderId: order.id, type: "PAYMENT", value: "PAID", note: `Razorpay payment captured (ID: ${razorpay_payment_id})`, createdBy: "system" },
+        ...(order.status === "PLACED" ? [{ orderId: order.id, type: "STATUS", value: "CONFIRMED", note: "Auto-confirmed after payment", createdBy: "system" }] : []),
+      ],
     });
 
     return json({ ok: true, order: { id: updated.id, orderNumber: updated.orderNumber, paymentStatus: updated.paymentStatus } });

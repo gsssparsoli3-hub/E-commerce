@@ -79,6 +79,15 @@ export type OrderItem = {
   productId: string;
 };
 
+export type OrderEvent = {
+  id: string;
+  type: string; // STATUS | PAYMENT | TRACKING | NOTE
+  value: string | null;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+};
+
 export type Order = {
   id: string;
   orderNumber: string;
@@ -92,8 +101,18 @@ export type Order = {
   paymentStatus: string;
   paymentId: string | null;
   status: string;
+  courierName: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  confirmedAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  cancelledAt: string | null;
+  notes: string | null;
   createdAt: string;
+  updatedAt: string;
   items: OrderItem[];
+  events?: OrderEvent[];
 };
 
 export type Coupon = {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, Package, XCircle } from "lucide-react";
+import { ChevronDown, ExternalLink, Package, Truck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -170,6 +170,32 @@ export function OrdersView() {
                       >
                         <XCircle className="h-4 w-4" /> Cancel order
                       </Button>
+                    )}
+
+                    {/* Tracking link for shipped / out-for-delivery orders */}
+                    {(order.status === "SHIPPED" || order.status === "DELIVERED") && order.trackingNumber && (
+                      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                        <Truck className="h-4 w-4 shrink-0 text-primary" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold">
+                            {order.courierName ? `Shipped via ${order.courierName}` : "Shipped"}
+                            <span className="ml-1 font-mono text-muted-foreground">· {order.trackingNumber}</span>
+                          </p>
+                          {order.shippedAt && (
+                            <p className="text-[11px] text-muted-foreground">Dispatched {formatDateTime(order.shippedAt)}</p>
+                          )}
+                        </div>
+                        {order.trackingUrl && (
+                          <a
+                            href={order.trackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                          >
+                            <ExternalLink className="h-3 w-3" /> Track
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

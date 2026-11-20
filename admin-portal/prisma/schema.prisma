@@ -153,13 +153,38 @@ model Order {
   razorpayOrderId String?
   status         String   @default("PLACED") // PLACED | CONFIRMED | SHIPPED | DELIVERED | CANCELLED
   notes          String?
+  // Shipping & tracking (set when admin marks SHIPPED)
+  courierName    String? // e.g. Delhivery, BlueDart, DTDC
+  trackingNumber String? // AWB / consignment number
+  trackingUrl    String? // direct courier tracking link
+  // Lifecycle timestamps (audit-friendly)
+  confirmedAt    DateTime?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  cancelledAt    DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  items OrderItem[]
+  items  OrderItem[]
+  events OrderEvent[]
 
   @@index([userId])
   @@index([status])
+  @@index([createdAt])
+}
+
+// Audit trail — one row per status / payment / tracking change
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type      String   // STATUS | PAYMENT | TRACKING | NOTE
+  value     String?  // new value (e.g. SHIPPED, PAID, the tracking number)
+  note      String?  // human-readable detail
+  createdBy String?  // admin email or "system" / "customer"
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
   @@index([createdAt])
 }
 

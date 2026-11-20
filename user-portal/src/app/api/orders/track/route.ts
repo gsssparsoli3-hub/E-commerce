@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       include: {
         user: { select: { email: true } },
         items: { select: { name: true, quantity: true, image: true, price: true } },
+        events: { orderBy: { createdAt: "asc" }, select: { type: true, value: true, note: true, createdAt: true } },
       },
     });
 
@@ -50,11 +51,25 @@ export async function POST(req: NextRequest) {
         couponCode: order.couponCode,
         placedAt: order.createdAt,
         updatedAt: order.updatedAt,
+        confirmedAt: order.confirmedAt,
+        shippedAt: order.shippedAt,
+        deliveredAt: order.deliveredAt,
+        cancelledAt: order.cancelledAt,
+        // Tracking is non-sensitive and needed so the customer can follow their shipment
+        courierName: order.courierName,
+        trackingNumber: order.trackingNumber,
+        trackingUrl: order.trackingUrl,
         items: order.items.map((i) => ({
           name: i.name,
           quantity: i.quantity,
           image: i.image,
           price: i.price,
+        })),
+        events: order.events.map((e) => ({
+          type: e.type,
+          value: e.value,
+          note: e.note,
+          createdAt: e.createdAt,
         })),
       },
     });

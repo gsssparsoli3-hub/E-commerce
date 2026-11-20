@@ -31,8 +31,18 @@ export function serializeOrder(order: {
   paymentStatus: string;
   paymentId: string | null;
   status: string;
+  courierName: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  confirmedAt: Date | null;
+  shippedAt: Date | null;
+  deliveredAt: Date | null;
+  cancelledAt: Date | null;
+  notes: string | null;
   createdAt: Date;
+  updatedAt: Date;
   items: { id: string; name: string; image: string; price: number; quantity: number; productId: string }[];
+  events?: { id: string; type: string; value: string | null; note: string | null; createdBy: string | null; createdAt: Date }[];
 }) {
   return {
     id: order.id,
@@ -47,8 +57,25 @@ export function serializeOrder(order: {
     paymentStatus: order.paymentStatus,
     paymentId: order.paymentId,
     status: order.status,
+    courierName: order.courierName,
+    trackingNumber: order.trackingNumber,
+    trackingUrl: order.trackingUrl,
+    confirmedAt: order.confirmedAt?.toISOString() ?? null,
+    shippedAt: order.shippedAt?.toISOString() ?? null,
+    deliveredAt: order.deliveredAt?.toISOString() ?? null,
+    cancelledAt: order.cancelledAt?.toISOString() ?? null,
+    notes: order.notes,
     createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
     items: order.items,
+    events: order.events?.map((e) => ({
+      id: e.id,
+      type: e.type,
+      value: e.value,
+      note: e.note,
+      createdBy: e.createdBy,
+      createdAt: e.createdAt.toISOString(),
+    })),
   };
 }
 

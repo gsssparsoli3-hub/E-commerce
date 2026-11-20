@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const order = await db.order.findFirst({
       where: { OR: [{ id }, { orderNumber: id }], userId: user.id },
-      include: { items: true },
+      include: { items: true, events: { orderBy: { createdAt: "asc" } } },
     });
     if (!order) return notFound("Order not found");
     return json({ order: serializeOrder(order) });
@@ -54,7 +54,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
       await tx.order.update({
         where: { id: order.id },
-        data: { status: "CANCELLED", paymentStatus: order.paymentStatus === "PAID" ? "REFUNDED" : order.paymentStatus },
+        data: { status: "CANCELLED", paymentStatus: order.paymentStatus === "PAID" ? "REFUNDED" : order.paymentStatus, cancelledAt: new Date() },
+      });
+      await tx.orderEvent.create({
+        data: {
+          orderId: order.id,
+          type: "STATUS",
+          value: "CANCELLED",
+          note: order.paymentStatus === "PAID" ? "Cancelled by customer — refund initiated" : "Cancelled by customer",
+          createdBy: "customer",
+        },
       });
     });
 
