@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { EcommerceApp } from "@/components/ecommerce/app";
 
+// Revalidate every hour so admin branding/SEO changes propagate without a redeploy.
+export const revalidate = 3600;
+
 // SEO metadata is fully controlled by the admin (Settings → SEO).
 async function getSettings() {
   try {
@@ -25,7 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     keywords: keywords.length > 0 ? keywords : undefined,
-    icons: { icon: s?.faviconUrl || "/brand/favicon.svg" },
+    // Admin-uploaded favicon wins; otherwise the runtime /icon route generates
+    // a branded letter-icon from siteName + primaryColor (see src/app/icon.tsx).
+    icons: { icon: s?.faviconUrl || "/icon" },
     openGraph: {
       title,
       description,

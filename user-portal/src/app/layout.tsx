@@ -4,6 +4,9 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 
+// Revalidate branding/SEO metadata hourly so admin changes propagate without a redeploy.
+export const revalidate = 3600;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
